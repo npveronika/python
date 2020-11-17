@@ -1,0 +1,348 @@
+import tkinter
+
+TAG = "tag"
+ATOM = "atom"
+DIRECTION = "direction"
+EAST = "east"
+WEST = "west"
+ATOM_H = "H"
+ATOM_O = "O"
+ATOM_H1 = "H1"
+ATOM_H2 = "H2"
+RIGHT = "Right"
+LEFT = "Left"
+UP = "Up"
+DOWN = "Down"
+
+LEVEL_01 =[[1,1,1,1,1,1,1,   1],
+          [1,0,0,0,1,1,ATOM_H2,1],
+          [1,0,1,1,1,0,0,   1],
+          [1,0,ATOM_H1,0,0,0,0,1],
+          [1,0,0,0,0,0,0,   1],
+          [1,0,0,1,0,0,0,   1],
+          [1,0,0,1,0,0,0,   1],
+          [1,0,0,1,0,ATOM_O,0, 1],
+          [1,0,0,0,0,0,0,   1],
+          [1,1,1,1,1,1,1,   1]]
+
+MOL_01 = [{ATOM: ATOM_H, DIRECTION: {EAST: 1}, TAG: ATOM_H1},\
+          {ATOM: ATOM_H, DIRECTION: {WEST: 1}, TAG: ATOM_H2},\
+          {ATOM: ATOM_O, DIRECTION: {EAST: 1, WEST: 1}, TAG: ATOM_O}]
+
+
+class Cursor: 
+    
+    def __init__(self):
+        self.i = 0
+        self.j = 0
+        self.tag = "c"
+        self.active = False
+      
+
+class View:
+    
+    SQUARE_SIZE = 30
+    X = 20
+    Y = 20
+    CIRCLE_DIAMETER = 16
+    LINE = 5
+    RED = "red"
+    BLUE = "blue"
+    YELLOW = "yellow"
+    PINK = "pink"
+    BLACK = "black"
+      
+    
+    def __init__(self, canvas):
+       self.canvas = canvas
+
+
+    def convert_to_x(self, j):
+        return int(self.X + j * self.SQUARE_SIZE)
+
+    def convert_to_y(self, i):
+        return int(self.Y + i * self.SQUARE_SIZE)
+    
+    def calculate_center(self, x, y):
+        return int(x + self.SQUARE_SIZE / 2) , int(y + self.SQUARE_SIZE / 2)
+
+    def draw_map(self, i, j):
+        self.canvas.create_rectangle(self.convert_to_x(j), self.convert_to_y(i), self.X + self.SQUARE_SIZE + self.SQUARE_SIZE * j,\
+                                self.Y + self.SQUARE_SIZE + self.SQUARE_SIZE * i, fill = self.RED, outline = self.BLUE)    
+
+    def draw_oval(self, x, y, tag):
+       
+        circle_corr = (self.SQUARE_SIZE - self.CIRCLE_DIAMETER) / 2
+        self.canvas.create_oval(x + circle_corr , y + circle_corr, x + self.SQUARE_SIZE - circle_corr, y + self.SQUARE_SIZE - circle_corr,\
+                                outline = self.BLACK, tags = tag)
+
+    def line_west(self, number, x, y, tag):
+        center = self.calculate_center(x, y)  
+        circumradius = self.CIRCLE_DIAMETER / 2
+        if number == 1:
+            self.canvas.create_line(center[0] - circumradius, center[1], center[0] - circumradius - self.LINE, center[1], tags = tag)
+    
+    def line_east(self, number, x, y, tag):
+        center = self.calculate_center(x, y)  
+        circumradius = self.CIRCLE_DIAMETER / 2
+        if number == 1:
+            self.canvas.create_line(center[0] + circumradius, center[1], center[0] + circumradius + self.LINE, center[1], tags = tag)
+
+    def line(self, direct, number, x, y, tag):
+        if direct == EAST:
+            self.line_east(number,  x, y, tag)
+        elif direct == WEST:
+            self.line_west(number,  x, y, tag)
+        elif direct == "south":
+            self.line_south(number,  x, y, tag)
+        elif direct == "north":
+            self.line_north(number,  x, y, tag)
+        elif direct == "southwest":
+            self.line_southwest(number,  x, y, tag)
+        elif direct == "northhwest":
+            self.line_northhwest(number,  x, y, tag)
+        elif direct == "northeast":
+            self.line_northeast(number,  x, y, tag)
+        elif direct == "southeast":
+            self.line_southeast(number,  x, y, tag)
+            
+    def draw_line(self, x, y, directions, tag):    
+        for key in directions:
+            self.line(key, directions[key], x, y, tag)
+            
+    def draw_hydrogen(self, atom, j, i):
+        x = self.convert_to_x(j)
+        y = self.convert_to_y(i)
+        self.draw_oval(x, y, atom[TAG])
+        self.canvas.create_text(self.calculate_center(x, y), text = atom[ATOM], tags = atom[TAG])
+        self.draw_line(x, y, atom[DIRECTION], atom[TAG])
+
+    def draw_oxygen(self, atom, j, i):
+        x = self.convert_to_x(j)
+        y = self.convert_to_y(i)
+        self.draw_oval(x, y, atom[TAG])
+        self.canvas.create_text(self.calculate_center(x, y), text = atom[ATOM], tags = atom[TAG])
+        self.draw_line(x, y, atom[DIRECTION], atom[TAG])
+
+    def draw_cursor(self, i, j, tag, active):
+       
+        x = self.convert_to_x(j)
+        y = self.convert_to_y(i)
+        if active == False:
+            self.canvas.create_line(x, y, x + self.SQUARE_SIZE, y, fill = self.YELLOW, width = 3, tags = tag)
+            self.canvas.create_line(x, y, x, y + self.SQUARE_SIZE, fill = self.YELLOW, width = 3, tags = tag)
+            self.canvas.create_line(x + self.SQUARE_SIZE, y, x + self.SQUARE_SIZE, y + self.SQUARE_SIZE, fill = self.YELLOW, width = 3, tags = tag)
+            self.canvas.create_line(x , y + self.SQUARE_SIZE, x + self.SQUARE_SIZE, y + self.SQUARE_SIZE, fill = self.YELLOW, width = 3, tags = tag)
+        else:
+            self.canvas.create_line(x, y, x + self.SQUARE_SIZE, y, fill = self.PINK, width = 3, tags = tag)
+            self.canvas.create_line(x, y, x, y + self.SQUARE_SIZE, fill = self.PINK, width = 3, tags = tag)
+            self.canvas.create_line(x + self.SQUARE_SIZE, y, x + self.SQUARE_SIZE, y + self.SQUARE_SIZE, fill = self.PINK, width = 3, tags = tag)
+            self.canvas.create_line(x , y + self.SQUARE_SIZE, x + self.SQUARE_SIZE, y + self.SQUARE_SIZE, fill = self.PINK, width = 3, tags = tag)
+                   
+
+    def delete_cursor(self, tag):
+        self.canvas.delete(tag)
+
+    
+class Model:
+
+    def __init__(self, level, mol, view):
+        self.level = level
+        self.mol = mol
+        self.cursor = Cursor()
+        self.view = view
+        
+
+    def draw_map_model(self):
+        for i in range(len(self.level)):
+            for j in range(len(self.level[i])):
+                if self.level[i][j] == 1:
+                    self.view.draw_map(i, j)              
+
+    def draw_atom(self, i, j):
+        for k in range(len(self.mol)):
+            if self.level[i][j] == self.mol[k][TAG]:
+                if self.mol[k][ATOM] == ATOM_H:
+                    self.view.draw_hydrogen(self.mol[k], j, i) 
+                elif self.mol[k][ATOM] == ATOM_O:
+                    self.view.draw_oxygen(self.mol[k], j, i)
+        
+    def draw_atoms(self):   
+        for i in range(len(self.level)):
+            for j in range(len(self.level[i])):
+                if self.level[i][j] != 1 and self.level[i][j] != 0:
+                    self.draw_atom(i, j)
+                    
+    def draw_cursor_model(self):
+        self.view.draw_cursor(self.cursor.i, self.cursor.j, self.cursor.tag, self.cursor.active)
+
+    def is_cursor_active(self):     
+        return self.cursor.active 
+            
+        
+    def is_field_occupied(self, i, j):     
+        if self.level[i][j] != 0 and self.level[i][j] != 1:       
+            return True
+        
+    def change_cursor_activation(self):
+        if self.cursor.active == True:
+            self.cursor.active = False
+            self.view.draw_cursor(self.cursor.i, self.cursor.j, self.cursor.tag, False)           
+        else:
+            self.cursor.active = True
+            self.view.draw_cursor(self.cursor.i, self.cursor.j, self.cursor.tag, True)
+
+
+    def is_cursor_on_the_map(self, direction):
+        if direction == RIGHT:
+            return len(self.level[self.cursor.i]) > self.cursor.j + 1
+        if direction == LEFT:
+            return self.cursor.j > 0
+        if direction == UP:
+            return self.cursor.i > 0
+        if direction == DOWN:
+            return len(self.level) > self.cursor.i + 1
+        
+    def change_cursor_position(self, direction):
+        if direction == RIGHT:
+            self.cursor.j += 1
+        elif direction == LEFT:
+            self.cursor.j -= 1
+        elif direction == UP:
+            self.cursor.i -= 1
+        elif direction == DOWN:
+            self.cursor.i += 1
+
+    def delete_cursor_model(self, tag):
+        self.view.delete_cursor(tag)
+        
+    def move_cursor(self, direction):     
+            self.change_cursor_position(direction)
+            self.delete_cursor_model(self.cursor.tag)
+            self.draw_cursor_model()        
+        
+    def find_goal_position(self, direction):
+        i = self.cursor.i + d[direction][0]
+        j = self.cursor.j+ d[direction][0]       
+        for k in range(j, len(level[i])):     
+            if level[i][k] != 0:
+                return i, k
+
+    def move_cursor_and_atom(self, direction):
+        new_position = map(self.find_goal_position, direction)
+            
+
+
+
+            
+    def move_cursor_and_atom(self, direction):
+        if self.is_cursor_active() and not self.is_end_position_occupied(self.RIGHT):
+            self.change_cursor_position(direction)
+            self.change_atom_position(direction)
+            self.delete_cursor_model(self.cursor.tag)
+            self.draw_cursor_model()
+        
+
+    def move(self, direction):
+        if not self.is_cursor_active() and self.is_cursor_on_the_map(direction):
+            self.move_cursor(direction)
+        else:
+            self.move_cursor_and_atom(direction)
+
+    def enter(self):     
+        if not self.is_cursor_active() and self.is_field_occupied(self.cursor.i, self.cursor.j):          
+            self.change_cursor_activation()
+        if self.is_cursor_active() and not self.is_field_occupied(self.cursor.i, self.cursor.j) :         
+            self.change_cursor_activation()
+
+    
+                
+class Control: 
+    
+    RETURN = "Return"
+    EVENT_RIGHT = "Right"
+    EVENT_LEFT = "Left"
+    EVENT_UP = "Up"
+    EVENT_DOWN = "Down"
+    
+    def __init__(self, model, view, canvas):
+        self.model = model
+        self.view = view
+        self.canvas = canvas
+        self.canvas.bind_all('<Return>', self.enter)
+        self.canvas.bind_all('<Key>', self.move)
+
+    def enter(self, event):
+        if event.keysym == self.RETURN:
+            self.model.enter()
+            
+    def move(self, event):
+        if event.keysym == self.EVENT_RIGHT:
+            self.model.move(self.RIGHT)       
+        if event.keysym == self.EVENT_LEFT:
+            self.model.move(self.LEFT)       
+        if event.keysym == self.EVENT_UP:
+            self.model.move(self.UP)       
+        if event.keysym == self.EVENT_DOWN:
+            self.model.move(self.DOWN)
+        
+
+        
+"""    def move_atom_and_cursor(self, event):
+            cursor_x = canvas.coords(cursor)[0]
+            cursor_y = canvas.coords(cursor)[1]
+
+        
+        if event.keysym == "Right" and cursor_x < MAX_RIGHT_SIDE and canvas.itemcget(cursor, "outline") == self.YELLOW:
+            canvas.move(cursor, 30, 0)
+        elif event.keysym == "Right" and canvas.itemcget(cursor, "outline") == self.PINK:
+            move_atom(cursor_x, cursor_y, event.keysym, self.field)
+            canvas.move(cursor, calculate_move_distance(cursor_x, cursor_y, event.keysym, self.field), 0)   
+        elif event.keysym == "Left" and cursor_x > X and canvas.itemcget(cursor, "outline") == self.YELLOW:
+            canvas.move(cursor, -30, 0)
+        elif event.keysym == "Left" and canvas.itemcget(cursor, "outline") == self.PINK:
+            move_atom(cursor_x, cursor_y, event.keysym, self.field)
+            canvas.move(cursor, calculate_move_distance(cursor_x, cursor_y, event.keysym, self.field), 0)  
+        elif event.keysym == "Up" and cursor_y > Y and canvas.itemcget(cursor, "outline") == self.YELLOW:
+            canvas.move(cursor, 0, -30)
+        elif event.keysym == "Up" and canvas.itemcget(cursor, "outline") == self.PINK:
+            move_atom(cursor_x, cursor_y, event.keysym, self.field)
+            canvas.move(cursor, calculate_move_distance(cursor_x, cursor_y, event.keysym, self.field), 0)  
+        elif event.keysym == "Down" and cursor_y < MAX_DOWN_SIDE and canvas.itemcget(cursor, "outline") == self.YELLOW:
+            canvas.move(cursor, 0, 30)
+        elif event.keysym == "Down" and canvas.itemcget(cursor, "outline") == self.PINK:
+            move_atom(cursor_x, cursor_y, event.keysym, self.field)
+            canvas.move(cursor, calculate_move_distance(cursor_x, cursor_y, event.keysym, self.field), 0)"""
+
+
+class Application:
+    
+    def run(self):
+        window = tkinter.Tk()
+        window.title("Atomix")
+        self.canvas = tkinter.Canvas(window, bg = "light grey", height = 600, width = 600)
+        self.canvas.pack()
+        
+
+app = Application()
+app.run()
+view = View(app.canvas)
+model = Model(LEVEL_01, MOL_01, view)
+control = Control(model, view, app.canvas)
+model.draw_map_model()
+model.draw_atoms()
+model.draw_cursor_model()
+
+
+"""window = tkinter.Tk()
+window.title("Atomix")
+canvas = tkinter.Canvas(window, bg = "light grey", height = 600, width = 600)
+canvas.pack()
+view = View(canvas)
+model = Model(LEVEL_01, MOL_01, view)
+control = Control(model, view, canvas)
+model.draw_map_model()
+model.draw_atoms()
+model.draw_cursor_model()"""
+
+
